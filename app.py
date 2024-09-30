@@ -1,86 +1,63 @@
-from flask import Flask, request, jsonify, send_file
-import tensorflow as tf
-import numpy as np
-from tensorflow.keras.preprocessing import image
-import matplotlib.pyplot as plt
-from io import BytesIO
 import os
+import numpy as np
+import matplotlib.pyplot as plt
+from flask import Flask, request, render_template, redirect, url_for
+from PIL import Image
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+import segmentation_models as sm
+from tensorflow.keras import backend as K
 
-# Constants
-MODEL_PATH = 'modal/satellite_standard_unet_100epochs.hdf5'
-IMG_HEIGHT = 256  # Set according to your model's expected input size
-IMG_WIDTH = 256   # Set according to your model's expected input size
-NUM_CLASSES = 6   # Set to the actual number of classes in your segmentation model
-
+# Initialize the Flask app
 app = Flask(__name__)
 
-# Load the model at startup
-model = tf.keras.models.load_model(MODEL_PATH)
+# Load the model
+weights = [0.1666] * 6
+dice_loss = sm.losses.DiceLoss(class_weights=weights)
+focal_loss = sm.losses.CategoricalFocalLoss()
+total_loss = dice_loss + (1 * focal_loss)
 
-# Define a color map for visualization
-def get_color_map(num_classes):
-    color_map = plt.get_cmap("hsv", num_classes)
-    return color_map
+def jacard_coef(y_true, y_pred):
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    return (intersection + 1.0) / (K.sum(y_true_f) + K.sum(y_pred_f) - intersection + 1.0)
 
-# Load and preprocess the image
-def load_and_preprocess_image(img):
-    img = img.resize((IMG_HEIGHT, IMG_WIDTH))  # Resize image to match model input size
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-    img_array /= 255.0  # Normalize if required
-    return img_array
+model_path = "modal/satellite_standard_unet_100epochs.hdf5"
+custom_objects = {
+    "dice_loss_plus_1focal_loss": total_loss,
+    "jacard_coef": jacard_coef
+}
+model = load_model(model_path, custom_objects=custom_objects)
 
-# Make predictions
-def make_prediction(img):
-    processed_img = load_and_preprocess_image(img)
-    predictions = model.predict(processed_img)
+# Route for the home page
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        file = request.files["image"]
+        if file:
+            # Load and process the image
+            test_img = Image.open(file)
+            desired_width, desired_height = 256, 256
+            test_img = test_img.resize((desired_width, desired_height))
+            test_img = np.array(test_img)
 
-    # Assuming multi-class segmentation, get the class with the highest score
-    predicted_mask = np.argmax(predictions[0], axis=-1).astype(np.uint8)
-    return predicted_mask
+            # Prepare the image for the model
+            test_img_input = np.expand_dims(test_img, axis=0)
 
-# Color the predicted mask
-def colorize_mask(mask, num_classes):
-    color_map = get_color_map(num_classes)
-    color_mask = color_map(mask)
-    return (color_mask[:, :, :3] * 255).astype(np.uint8)  # Convert to uint8
+            # Make the prediction
+            prediction = model.predict(test_img_input)
+            predicted_img = np.argmax(prediction, axis=3)[0, :, :]
 
-# Convert the mask to an image that can be sent in response
-def mask_to_image(mask):
-    img = image.array_to_img(mask)
-    return img
+            # Save the predicted image
+            plt.imshow(predicted_img)
+            plt.axis('off')
+            plt.savefig("static/predicted_image.png", bbox_inches='tight', pad_inches=0)
+            plt.close()
 
-# Route for image upload and prediction
-@app.route('/predict', methods=['POST'])
-def predict():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+            return render_template("index.html", predicted_image="static/predicted_image.png")
 
-    file = request.files['file']
+    return render_template("index.html")
 
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    if file:
-        # Load the image
-        img = image.load_img(file, target_size=(IMG_HEIGHT, IMG_WIDTH))
-
-        # Make prediction
-        predicted_mask = make_prediction(img)
-
-        # Colorize the predicted mask
-        colored_mask = colorize_mask(predicted_mask, NUM_CLASSES)
-
-        # Convert mask to image and send as a response
-        mask_img = mask_to_image(colored_mask)
-
-        # Save to a BytesIO object and return it as a file
-        img_io = BytesIO()
-        mask_img.save(img_io, 'PNG')
-        img_io.seek(0)
-
-        return send_file(img_io, mimetype='image/png')
-
-# Start the Flask app
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)

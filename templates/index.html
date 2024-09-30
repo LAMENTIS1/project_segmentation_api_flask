@@ -1,1 +1,161 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Segmentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #2c3e50, #4ca1af);
+            color: #ffffff;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar .logo {
+            font-size: 22px;
+            font-weight: 500;
+            color: #fff;
+            letter-spacing: 1.2px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #dddddd;
+        }
+
+        .image-upload {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px dashed #b0b0b0;
+            padding: 80px;
+            border-radius: 15px;
+            position: relative;
+            margin-bottom: 30px;
+            transition: background-color 0.3s ease;
+        }
+
+        .image-upload:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .image-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .image-placeholder label {
+            background-color: #3a3a3a;
+            color: white;
+            font-size: 18px;
+            padding: 15px 35px;
+            border-radius: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .image-placeholder label:hover {
+            background-color: #4a4a4a;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .image-placeholder p {
+            margin-top: 15px;
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        .image-placeholder button {
+            margin-top: 20px;
+            background-color: #4ca1af;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .image-placeholder button:hover {
+            background-color: #2980b9;
+        }
+
+        img {
+            margin-top: 20px;
+            border-radius: 10px;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Image Segmentation</div>
+    </nav>
+
+    <div class="container">
+        <h1>Upload an Image for Segmentation</h1>
+        <p>Unleash the Power of AI: Segment Your Images with Precision</p>
+
+        <div class="image-upload">
+            <div class="image-placeholder">
+                <form action="/predict" method="post" enctype="multipart/form-data">
+                    <label for="file-input">
+                        <span>Select Image</span>
+                    </label>
+                    <input id="file-input" type="file" name="file" accept="image/*" required />
+                    <p>or, drag and drop an image here</p>
+                    <button type="submit">Predict</button>
+                </form>
+            </div>
+        </div>
+
+        {% if uploaded_image %}
+            <h2>Uploaded Image</h2>
+            <img src="{{ url_for('static', filename='uploads/' + uploaded_image) }}" alt="Uploaded Image">
+            
+            <h2>Predicted Image</h2>
+            <img src="{{ url_for('static', filename='uploads/' + predicted_image) }}" alt="Predicted Image">
+        {% endif %}
+    </div>
+</body>
+</html>

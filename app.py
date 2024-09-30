@@ -25,7 +25,7 @@ def jacard_coef(y_true, y_pred):
     intersection = K.sum(y_true_f * y_pred_f)
     return (intersection + 1.0) / (K.sum(y_true_f) + K.sum(y_pred_f) - intersection + 1.0)
 
-model_path = r"C:\Users\sriva\Videos\dubai segmentation\satellite_standard_unet_100epochs.hdf5"
+model_path = r"modal/satellite_standard_unet_100epochs.hdf5"
 custom_objects = {
     "dice_loss_plus_1focal_loss": total_loss,
     "jacard_coef": jacard_coef

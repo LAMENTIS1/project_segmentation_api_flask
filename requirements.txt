@@ -1,6 +1,7 @@
-Flask
 tensorflow
+segmentation-models
+Flask
+Pillow
 numpy
 matplotlib
-Pillow
-gunicorn 
+keras
